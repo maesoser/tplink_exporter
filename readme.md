@@ -10,7 +10,7 @@ The tplink package created for this exporter can be used for another projects be
 
 ## Usage
 
-Just create a systemd service like this one:
+First compile it, of course. Then, you just need create a systemd service like this one:
 
 ```
 [Unit]
