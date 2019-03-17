@@ -6,7 +6,7 @@ Inspired by [this repository](https://github.com/mkubicek/tpylink).
 
 The tplink package created for this exporter can be used for another projects besides this exporter.
 
-![grafana_image](https://raw.githubusercontent.com/maesoser/tp_link_exporter/master/images/grafana.png)
+![grafana_image](https://raw.githubusercontent.com/maesoser/tp_link_exporter/master/images/grafana.jpg)
 
 ## Usage
 
