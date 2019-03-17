@@ -4,7 +4,7 @@ Prometheus exporter for cheap TP-Link routers, like the [TL-WR841N](https://www.
 
 Inspired by [this repository](https://github.com/mkubicek/tpylink).
 
-The tplink package created for this exporter can be used for another projects besides this exporter.
+The tplink package created for this exporter can be used for another projects besides this one.
 
 ![grafana_image](https://github.com/maesoser/tplink_exporter/raw/master/images/grafana.jpg)
 
