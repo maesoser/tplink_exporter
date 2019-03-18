@@ -67,7 +67,7 @@ func parseLease(LeaseTime string) float64 {
 }
 
 //Init configures the http client and generates the cookie
-func NewRouter(address, user, pass string) *Router{
+func NewRouter(address, user, pass string) *Router {
 	router := &Router{
 		User:    user,
 		Pass:    pass,
