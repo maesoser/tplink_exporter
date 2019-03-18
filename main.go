@@ -118,20 +118,14 @@ func init() {
 }
 
 func main() {
+	Address := flag.String("a", "192.168.0.1", "Router's address")
+	Pass := flag.String("w", "admin", "Router's password")
+	User := flag.String("u", "admin", "Router's username")
+	Port := flag.Int("p", 9300, "Prometheus port")
 
-	routerAddr := flag.String("a", "192.168.0.1", "Router's address")
-	routerPass := flag.String("w", "admin", "Router's password")
-	routerUser := flag.String("u", "admin", "Router's username")
-	prometheusPort := flag.Int("p", 9300, "Prometheus port")
-
-	router := &tplink.Router{
-		User:    *routerUser,
-		Pass:    *routerPass,
-		Address: *routerAddr,
-	}
-	router.Init()
+	router := NewRouter(*Address, *User, *Pass)
 	go PeriodicRefresh(router, 60*time.Second)
 
 	http.Handle("/metrics", promhttp.Handler())
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*prometheusPort), nil))
+	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*Port), nil))
 }

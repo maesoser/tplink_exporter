@@ -67,11 +67,17 @@ func parseLease(LeaseTime string) float64 {
 }
 
 //Init configures the http client and generates the cookie
-func (r *Router) Init() {
-	hashpass := getMD5Hash(r.Pass)
-	auth := base64.StdEncoding.EncodeToString([]byte(r.User + ":" + hashpass))
-	r.Cookie = http.Cookie{Name: "Authorization", Value: auth}
-	r.Client = http.Client{Timeout: time.Second * 2}
+func NewRouter(address, user, pass string) *Router{
+	router := &Router{
+		User:    user,
+		Pass:    pass,
+		Address: address,
+	}
+	hashpass := getMD5Hash(pass)
+	auth := base64.StdEncoding.EncodeToString([]byte(user + ":" + hashpass))
+	router.Cookie = http.Cookie{Name: "Authorization", Value: auth}
+	router.Client = http.Client{Timeout: time.Second * 2}
+	return router
 }
 
 // Login retrieves the Token needed to perform requests to the router
