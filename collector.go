@@ -16,9 +16,6 @@ import (
 type routerCollector struct {
 	txWANTraffic *prometheus.Desc
 	rxWANTraffic *prometheus.Desc
-	LANTraffic   *prometheus.Desc
-	LANPackets   *prometheus.Desc
-	LANLeases    *prometheus.Desc
 
 	router  *tplink.Router
 	macs    macdb.DB
@@ -58,9 +55,6 @@ func newRouterCollector(router *tplink.Router, macs, vendors macdb.DB) *routerCo
 func (collector *routerCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.txWANTraffic
 	ch <- collector.rxWANTraffic
-	ch <- collector.LANTraffic
-	ch <- collector.LANPackets
-	ch <- collector.LANLeases
 
 }
 
