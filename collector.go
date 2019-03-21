@@ -45,24 +45,6 @@ func newRouterCollector(router *tplink.Router, macs, vendors macdb.DB) *routerCo
 		nil, nil,
 	)
 
-	c.LANTraffic = prometheus.NewDesc(
-		"tplink_lan_traffic_kbytes",
-		"KBytes sent/received per device",
-		[]string{"name", "addr", "mac"}, nil,
-	)
-
-	c.LANPackets = prometheus.NewDesc(
-		"tplink_lan_traffic_packets",
-		"Packets sent/received per device",
-		[]string{"name", "addr", "mac"}, nil,
-	)
-
-	c.LANLeases = prometheus.NewDesc(
-		"tplink_lan_lease_seconds",
-		"Lease seconds left",
-		[]string{"name", "addr", "mac"}, nil,
-	)
-
 	c.macs = macs
 	c.vendors = vendors
 	c.router = router
@@ -107,18 +89,37 @@ func (collector *routerCollector) scrape(ch chan<- prometheus.Metric) error {
 		if len(name) == 0 {
 			name = client.Name
 		}
+
+		LANTraffic := prometheus.NewDesc(
+			"tplink_lan_traffic_kbytes",
+			"KBytes sent/received per device",
+			[]string{"name", "addr", "mac"}, nil,
+		)
+
+		LANPackets := prometheus.NewDesc(
+			"tplink_lan_traffic_packets",
+			"Packets sent/received per device",
+			[]string{"name", "addr", "mac"}, nil,
+		)
+
+		LANLeases := prometheus.NewDesc(
+			"tplink_lan_lease_seconds",
+			"Lease seconds left",
+			[]string{"name", "addr", "mac"}, nil,
+		)
+
 		ch <- prometheus.MustNewConstMetric(
-			collector.LANTraffic,
+			LANTraffic,
 			prometheus.GaugeValue,
 			client.Bytes,
 			name, client.Addr, client.MAC)
 		ch <- prometheus.MustNewConstMetric(
-			collector.LANLeases,
+			LANLeases,
 			prometheus.GaugeValue,
 			client.Lease,
 			name, client.Addr, client.MAC)
 		ch <- prometheus.MustNewConstMetric(
-			collector.LANPackets,
+			LANPackets,
 			prometheus.GaugeValue,
 			client.Packets,
 			name, client.Addr, client.MAC)
