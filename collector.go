@@ -1,11 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"github.com/maesoser/tplink_exporter/macdb"
 	"github.com/maesoser/tplink_exporter/tplink"
 	"github.com/prometheus/client_golang/prometheus"
-	"sync"
 	"log"
-	"fmt"
+	"sync"
 )
 
 //Define a struct for you collector that contains pointers
@@ -20,15 +21,15 @@ type routerCollector struct {
 	LANLeases    *prometheus.Desc
 
 	router  *tplink.Router
-	macs    MACList
-	vendors MACList
+	macs    macdb.DB
+	vendors macdb.DB
 
 	mutex sync.Mutex
 }
 
 //You must create a constructor for you collector that
 //initializes every descriptor and returns a pointer to the collector
-func newRouterCollector(router *tplink.Router, macs, vendors MACList) *routerCollector {
+func newRouterCollector(router *tplink.Router, macs, vendors macdb.DB) *routerCollector {
 
 	c := routerCollector{}
 
@@ -47,19 +48,19 @@ func newRouterCollector(router *tplink.Router, macs, vendors MACList) *routerCol
 	c.LANTraffic = prometheus.NewDesc(
 		"tplink_lan_traffic_kbytes",
 		"KBytes sent/received per device",
-		nil, nil,
+		[]string{"name", "addr", "mac"}, nil,
 	)
 
 	c.LANPackets = prometheus.NewDesc(
 		"tplink_lan_traffic_packets",
 		"Packets sent/received per device",
-		nil, nil,
+		[]string{"name", "addr", "mac"}, nil,
 	)
 
 	c.LANLeases = prometheus.NewDesc(
 		"tplink_lan_lease_seconds",
 		"Lease seconds left",
-		nil, nil,
+		[]string{"name", "addr", "mac"}, nil,
 	)
 
 	c.macs = macs
@@ -81,34 +82,47 @@ func (collector *routerCollector) Describe(ch chan<- *prometheus.Desc) {
 
 }
 
-func (c *Collector) scrape(ch chan<- prometheus.Metric) error {
-	err := c.router.Login()
+func (collector *routerCollector) scrape(ch chan<- prometheus.Metric) error {
+	err := collector.router.Login()
 	if err != nil {
 		return fmt.Errorf("Error logging: %v", err)
 	}
-	rx, tx, err := c.router.GetWANTraffic()
+	rx, tx, err := collector.router.GetWANTraffic()
 	if err != nil {
 		return fmt.Errorf("Error getting WAN metrics: %v", err)
 	}
-	ch <- prometheus.MustNewConstMetric(c.rxWANTraffic, prometheus.CounterValue, rx)
-	ch <- prometheus.MustNewConstMetric(c.txWANTraffic, prometheus.CounterValue, tx)
+	ch <- prometheus.MustNewConstMetric(collector.rxWANTraffic, prometheus.CounterValue, rx)
+	ch <- prometheus.MustNewConstMetric(collector.txWANTraffic, prometheus.CounterValue, tx)
 
-	clients, err := router.GetClients()
+	clients, err := collector.router.GetClients()
 	if err != nil {
 		return fmt.Errorf("Error getting WAN metrics: %v", err)
 	}
-	clients, err = c.router.GetLANTraffic(clients)
+	clients, err = collector.router.GetLANTraffic(clients)
 	if err != nil {
 		return fmt.Errorf("Error getting LAN metrics: %v", err)
 	}
 	for _, client := range clients {
-		name := MACLookup(client.MAC, c.macs, c.vendors)
+		name := macdb.Lookup(client.MAC, collector.macs, collector.vendors)
 		if len(name) == 0 {
 			name = client.Name
 		}
-		c.LANTraffic.With(prometheus.Labels{"mac":  client.MAC,"addr": client.Addr,"name": name,}).Set(client.Bytes)
-		c.LANLeases.With(prometheus.Labels{"mac":  client.MAC,"addr": client.Addr,"name": name,}).Set(client.Lease)
-		c.LANPackets.With(prometheus.Labels{"mac":  client.MAC,"addr": client.Addr,"name": name,}).Set(client.Packets)
+		ch <- prometheus.MustNewConstMetric(
+			collector.LANTraffic,
+			prometheus.GaugeValue,
+			client.Bytes,
+			name, client.Addr, client.MAC)
+		ch <- prometheus.MustNewConstMetric(
+			collector.LANLeases,
+			prometheus.GaugeValue,
+			client.Lease,
+			name, client.Addr, client.MAC)
+		ch <- prometheus.MustNewConstMetric(
+			collector.LANPackets,
+			prometheus.GaugeValue,
+			client.Packets,
+			name, client.Addr, client.MAC)
+
 	}
 	return nil
 	//router.Logout()
@@ -117,14 +131,14 @@ func (c *Collector) scrape(ch chan<- prometheus.Metric) error {
 //Collect implements required collect function for all promehteus collectors
 func (collector *routerCollector) Collect(ch chan<- prometheus.Metric) {
 
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	collector.mutex.Lock()
+	defer collector.mutex.Unlock()
 
-	err := c.scrape(ch)
-	if err != nil{
+	err := collector.scrape(ch)
+	if err != nil {
 		log.Println("Error scraping data for router", err)
 	}
 
-	ch <- prometheus.MustNewConstMetric(collector.barMetric, prometheus.CounterValue, metricValue)
+	//ch <- prometheus.MustNewConstMetric(collector.barMetric, prometheus.CounterValue, metricValue)
 
 }
