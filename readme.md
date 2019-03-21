@@ -14,13 +14,13 @@ First compile it, of course. Then, you just need create a systemd service like t
 
 ```
 [Unit]
-Description=Node Exporter
+Description=TP-Link Exporter
 Wants=network-online.target
 After=network-online.target
 
 [Service]
-User=node_exporter
-Group=node_exporter
+User=tplink_exporter
+Group=tplink_exporter
 Type=simple
 ExecStart=/usr/local/bin/tplink_exporter
 
@@ -50,7 +50,4 @@ sudo systemctl start tplink_exporter
 - **tplink_lan_traffic_packets:** Packets sent/received per device
 - **tplink_lan_leases_seconds:** Lease time left per device
 
-LAN metrics include
-- IP address
-- MAC Address
-- Device name
+LAN metrics include IP and MAC addresses and device name as labels. 
