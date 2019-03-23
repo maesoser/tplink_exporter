@@ -24,12 +24,12 @@ const (
 )
 
 type Client struct {
-	Name    string
-	MAC     string
-	Addr    string
-	Lease   float64
-	Packets float64
-	Bytes   float64
+	Name      string
+	MACAddr   string
+	IPAddr    string
+	DHCPLease float64
+	Packets   float64
+	KBytes    float64
 }
 
 type Router struct {
@@ -150,8 +150,17 @@ func (r *Router) GetWANTraffic() (float64, float64, error) {
 	return tx / 1024, rx / 1024, nil
 }
 
+func contains(clients []Client, client Client) bool {
+	for _, c := range clients {
+		if client.MACAddr == c.MACAddr {
+			return true
+		}
+	}
+	return false
+}
+
 // GetClients obtain the list of clients connected to the router's wifi
-func (r *Router) GetClients() ([]Client, error) {
+func (r *Router) getClients() ([]Client, error) {
 	var clients []Client
 	body, err := r.Get("http://" + r.Address + "/" + r.Token + CLIENTS_URL)
 	if err != nil {
@@ -165,29 +174,35 @@ func (r *Router) GetClients() ([]Client, error) {
 		match = strings.Replace(match, " ", "", -1)
 		data := strings.Split(match, ",")
 		client := Client{
-			Name:  strings.Replace(data[0], "\"", "", -1),
-			MAC:   strings.Replace(data[1], "\"", "", -1),
-			Addr:  strings.Replace(data[2], "\"", "", -1),
-			Lease: parseLease(strings.Replace(data[3], "\"", "", -1)),
+			Name:      strings.Replace(data[0], "\"", "", -1),
+			MACAddr:   strings.Replace(data[1], "\"", "", -1),
+			IPAddr:    strings.Replace(data[2], "\"", "", -1),
+			DHCPLease: parseLease(strings.Replace(data[3], "\"", "", -1)),
 		}
-		clients = append(clients, client)
+		if !contains(clients, client) {
+			clients = append(clients, client)
+		}
 	}
 	return clients, nil
 }
 
-// Get LAN Traffic takes as argument the list of clients obtained with GetClients
+// GetLANTraffic takes as argument the list of clients obtained with GetClients
 // and fill the fields related to packet and kbytes usage.
 // GetClients does not returns the clients connected to the LAN, this function
 // also add the ones connected through ethernet to the list.
-func (r *Router) GetLANTraffic(clients []Client) ([]Client, error) {
-	var enhClients []Client
+func (r *Router) GetLANTraffic() ([]Client, error) {
+	var totalClients []Client
+	clients, err := r.getClients()
+	if err != nil {
+		return clients, err
+	}
 	body, err := r.Get("http://" + r.Address + "/" + r.Token + STATS_URL)
 	if err != nil {
-		return enhClients, err
+		return totalClients, err
 	}
 	expr, err := regexp.Compile(`(?m)\d+, "([^\"]*)", "([^\"]*)", \d+, \d+`)
 	if err != nil {
-		return enhClients, err
+		return totalClients, err
 	}
 	for _, match := range expr.FindAllString(body, -1) {
 		match = strings.Replace(match, " ", "", -1)
@@ -196,34 +211,35 @@ func (r *Router) GetLANTraffic(clients []Client) ([]Client, error) {
 		mac := strings.Replace(data[2], "\"", "", -1)
 		packets, err := strconv.ParseFloat(strings.Replace(data[3], "\"", "", -1), 64)
 		if err != nil {
-			return enhClients, err
+			return totalClients, err
 		}
 		bytes, err := strconv.ParseFloat(strings.Replace(data[4], "\"", "", -1), 64)
 		if err != nil {
-			return enhClients, err
+			return totalClients, err
 		}
 		found := false
 		for _, client := range clients {
-			if client.MAC == mac {
+			if client.MACAddr == mac {
 				client.Packets = packets
-				client.Bytes = bytes / 1024
-				enhClients = append(enhClients, client)
+				client.KBytes = bytes / 1024
+				if !contains(totalClients, client) {
+					totalClients = append(totalClients, client)
+				}
 				found = true
 			}
 		}
 		if found == false {
-			client := Client{
-				Name:    "ethdev",
-				MAC:     mac,
-				Addr:    addr,
-				Lease:   0,
-				Packets: packets,
-				Bytes:   bytes / 1024,
-			}
-			enhClients = append(enhClients, client)
+			totalClients = append(totalClients, Client{
+				Name:      "Unknown",
+				MACAddr:   mac,
+				IPAddr:    addr,
+				DHCPLease: 0,
+				Packets:   packets,
+				KBytes:    bytes / 1024,
+			})
 		}
 	}
-	return enhClients, nil
+	return totalClients, nil
 }
 
 // Logout logs out of the router

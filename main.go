@@ -20,12 +20,12 @@ func main() {
 	Port := flag.Int("p", 9300, "Prometheus port")
 	Filename := flag.String("f", "/etc/known_macs", "MAC Database")
 
-	macs, vendors, err := macdb.Open(*Filename)
+	macs, vendors, err := macdb.Load(*Filename)
 	if err != nil {
 		log.Println("Unable to load MAC database:", err)
 	} else {
-		log.Printf("%d custom MACs loaded\n", len(macs))
-		log.Printf("%d vendor MACs loaded\n", len(vendors))
+		log.Printf("%d custom MACs loaded\n%d vendor MACs loaded\n",
+			len(macs), len(vendors))
 	}
 
 	router := tplink.NewRouter(*Address, *User, *Pass)

@@ -9,7 +9,7 @@ import (
 
 type DB map[string]string
 
-func Open(filename string) (DB, DB, error) {
+func Load(filename string) (DB, DB, error) {
 	var customMACs = make(map[string]string)
 	var vendorMACs = make(map[string]string)
 	if len(filename) == 0 {
