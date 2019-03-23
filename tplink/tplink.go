@@ -159,7 +159,7 @@ func contains(clients []Client, client Client) bool {
 	return false
 }
 
-// GetClients obtain the list of clients connected to the router's wifi
+// GetClients obtain the list of clients connected to the router's wireless interface
 func (r *Router) getClients() ([]Client, error) {
 	var clients []Client
 	body, err := r.Get("http://" + r.Address + "/" + r.Token + CLIENTS_URL)
@@ -185,11 +185,8 @@ func (r *Router) getClients() ([]Client, error) {
 	}
 	return clients, nil
 }
-
-// GetLANTraffic takes as argument the list of clients obtained with GetClients
-// and fill the fields related to packet and kbytes usage.
-// GetClients does not returns the clients connected to the LAN, this function
-// also add the ones connected through ethernet to the list.
+// GetLANTraffic returns the list of clients connected to the router and
+// information about them like traffic, DHCP Leases, etcetera.
 func (r *Router) GetLANTraffic() ([]Client, error) {
 	var totalClients []Client
 	clients, err := r.getClients()

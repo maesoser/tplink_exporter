@@ -84,14 +84,15 @@ func (collector *routerCollector) scrape(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return fmt.Errorf("Error getting WAN metrics: %v", err)
 	}
-	ch <- prometheus.MustNewConstMetric(collector.rxWANTraffic, prometheus.CounterValue, rx)
-	ch <- prometheus.MustNewConstMetric(collector.txWANTraffic, prometheus.CounterValue, tx)
+	ch <- prometheus.MustNewConstMetric(collector.rxWANTraffic,
+		prometheus.CounterValue, rx)
+	ch <- prometheus.MustNewConstMetric(collector.txWANTraffic,
+		prometheus.CounterValue, tx)
 
 	clients, err := collector.router.GetLANTraffic()
 	if err != nil {
 		return fmt.Errorf("Error getting LAN metrics: %v", err)
 	}
-	log.Println("SCRAPE:", len(clients))
 	for _, client := range clients {
 		name := macdb.Lookup(client.MACAddr, collector.macs, collector.vendors)
 		if len(name) != 0 {
@@ -101,7 +102,7 @@ func (collector *routerCollector) scrape(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			collector.LANTraffic,
 			prometheus.GaugeValue,
-			client.DHCPLease,
+			client.KBytes,
 			client.Name, client.IPAddr, client.MACAddr)
 		ch <- prometheus.MustNewConstMetric(
 			collector.LANLeases,
@@ -127,9 +128,11 @@ func (collector *routerCollector) Collect(ch chan<- prometheus.Metric) {
 
 	err := collector.scrape(ch)
 	if err != nil {
-		log.Println("Error scraping data for router", err)
+		log.Println("Error scraping data for router\n", err)
+		err := collector.scrape(ch)
+		if err != nil {
+			log.Println("Error scraping data for router\n", err)
+		}
 	}
-
-	//ch <- prometheus.MustNewConstMetric(collector.barMetric, prometheus.CounterValue, metricValue)
 
 }
