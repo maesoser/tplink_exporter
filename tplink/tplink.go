@@ -102,7 +102,7 @@ func (r *Router) Login() error {
 		return err
 	}
 	req.AddCookie(&r.Cookie)
-	req.Header.Set("Referer", "http://"+r.Address)
+	//req.Header.Set("Referer", "http://"+r.Address)
 	response, err := r.HTTPClient.Do(req)
 	if err != nil {
 		return err
