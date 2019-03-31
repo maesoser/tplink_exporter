@@ -23,6 +23,7 @@ const (
 	AUTH_KEY_RE     = "[0-9A-Za-z.]+/([A-Z]{16})/userRpm/Index.htm"
 )
 
+// Client defines a router's client with all it's asssociated data
 type Client struct {
 	Name      string
 	MACAddr   string
@@ -32,13 +33,16 @@ type Client struct {
 	KBytes    float64
 }
 
+// A Router defined the router object
 type Router struct {
-	Client  http.Client
-	Cookie  http.Cookie
-	Token   string
-	Address string
-	User    string
-	Pass    string
+	HTTPClient http.Client
+	Cookie     http.Cookie
+	Token      string
+	Address    string
+	User       string
+	Pass       string
+
+	Clients []Client
 }
 
 func getMD5Hash(text string) string {
@@ -66,7 +70,7 @@ func parseLease(LeaseTime string) float64 {
 	return float64(total)
 }
 
-//Init configures the http client and generates the cookie
+// NewRouter configures the http client and generates the cookie
 func NewRouter(address, user, pass string) *Router {
 	router := &Router{
 		User:    user,
@@ -76,7 +80,7 @@ func NewRouter(address, user, pass string) *Router {
 	hashpass := getMD5Hash(pass)
 	auth := base64.StdEncoding.EncodeToString([]byte(user + ":" + hashpass))
 	router.Cookie = http.Cookie{Name: "Authorization", Value: auth}
-	router.Client = http.Client{Timeout: time.Second * 2}
+	router.HTTPClient = http.Client{Timeout: time.Second * 2}
 	return router
 }
 
@@ -87,7 +91,7 @@ func (r *Router) Login() error {
 		return err
 	}
 	req.AddCookie(&r.Cookie)
-	response, err := r.Client.Do(req)
+	response, err := r.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -118,7 +122,7 @@ func (r *Router) Get(url string) (string, error) {
 	}
 	req.AddCookie(&r.Cookie)
 	req.Header.Set("Referer", url)
-	response, err := r.Client.Do(req)
+	response, err := r.HTTPClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -185,21 +189,21 @@ func (r *Router) getClients() ([]Client, error) {
 	}
 	return clients, nil
 }
+
 // GetLANTraffic returns the list of clients connected to the router and
 // information about them like traffic, DHCP Leases, etcetera.
-func (r *Router) GetLANTraffic() ([]Client, error) {
-	var totalClients []Client
+func (r *Router) Update() error {
 	clients, err := r.getClients()
 	if err != nil {
-		return clients, err
+		return err
 	}
 	body, err := r.Get("http://" + r.Address + "/" + r.Token + STATS_URL)
 	if err != nil {
-		return totalClients, err
+		return err
 	}
 	expr, err := regexp.Compile(`(?m)\d+, "([^\"]*)", "([^\"]*)", \d+, \d+`)
 	if err != nil {
-		return totalClients, err
+		return err
 	}
 	for _, match := range expr.FindAllString(body, -1) {
 		match = strings.Replace(match, " ", "", -1)
@@ -208,25 +212,25 @@ func (r *Router) GetLANTraffic() ([]Client, error) {
 		mac := strings.Replace(data[2], "\"", "", -1)
 		packets, err := strconv.ParseFloat(strings.Replace(data[3], "\"", "", -1), 64)
 		if err != nil {
-			return totalClients, err
+			return err
 		}
 		bytes, err := strconv.ParseFloat(strings.Replace(data[4], "\"", "", -1), 64)
 		if err != nil {
-			return totalClients, err
+			return err
 		}
 		found := false
 		for _, client := range clients {
 			if client.MACAddr == mac {
 				client.Packets = packets
 				client.KBytes = bytes / 1024
-				if !contains(totalClients, client) {
-					totalClients = append(totalClients, client)
+				if !contains(r.Clients, client) {
+					r.Clients = append(r.Clients, client)
 				}
 				found = true
 			}
 		}
 		if found == false {
-			totalClients = append(totalClients, Client{
+			r.Clients = append(r.Clients, Client{
 				Name:      "Unknown",
 				MACAddr:   mac,
 				IPAddr:    addr,
@@ -236,7 +240,7 @@ func (r *Router) GetLANTraffic() ([]Client, error) {
 			})
 		}
 	}
-	return totalClients, nil
+	return nil
 }
 
 // Logout logs out of the router
