@@ -89,11 +89,11 @@ func (collector *routerCollector) scrape(ch chan<- prometheus.Metric) error {
 	ch <- prometheus.MustNewConstMetric(collector.txWANTraffic,
 		prometheus.CounterValue, tx)
 
-	clients, err := collector.router.GetLANTraffic()
+	err = collector.router.Update()
 	if err != nil {
 		return fmt.Errorf("Error getting LAN metrics: %v", err)
 	}
-	for _, client := range clients {
+	for _, client := range collector.router.Clients {
 		name := macdb.Lookup(client.MACAddr, collector.macs, collector.vendors)
 		if len(name) != 0 {
 			client.Name = name

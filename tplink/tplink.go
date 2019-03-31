@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -23,6 +24,9 @@ const (
 	AUTH_KEY_RE     = "[0-9A-Za-z.]+/([A-Z]{16})/userRpm/Index.htm"
 )
 
+const MaxUint = float64(4294967295)
+
+// Client defines a router's client with all it's asssociated data
 type Client struct {
 	Name      string
 	MACAddr   string
@@ -32,13 +36,24 @@ type Client struct {
 	KBytes    float64
 }
 
+// A Router defined the router object
 type Router struct {
-	Client  http.Client
-	Cookie  http.Cookie
-	Token   string
-	Address string
-	User    string
-	Pass    string
+	HTTPClient http.Client
+	Cookie     http.Cookie
+	Token      string
+	Address    string
+	User       string
+	Pass       string
+
+	Verbose bool
+
+	Clients []Client
+}
+
+func (r *Router) debug(format string, v ...interface{}) {
+	if r.Verbose {
+		log.Printf(format, v...)
+	}
 }
 
 func getMD5Hash(text string) string {
@@ -66,7 +81,7 @@ func parseLease(LeaseTime string) float64 {
 	return float64(total)
 }
 
-//Init configures the http client and generates the cookie
+// NewRouter configures the http client and generates the cookie
 func NewRouter(address, user, pass string) *Router {
 	router := &Router{
 		User:    user,
@@ -76,7 +91,7 @@ func NewRouter(address, user, pass string) *Router {
 	hashpass := getMD5Hash(pass)
 	auth := base64.StdEncoding.EncodeToString([]byte(user + ":" + hashpass))
 	router.Cookie = http.Cookie{Name: "Authorization", Value: auth}
-	router.Client = http.Client{Timeout: time.Second * 2}
+	router.HTTPClient = http.Client{Timeout: time.Second * 2}
 	return router
 }
 
@@ -87,7 +102,8 @@ func (r *Router) Login() error {
 		return err
 	}
 	req.AddCookie(&r.Cookie)
-	response, err := r.Client.Do(req)
+	//req.Header.Set("Referer", "http://"+r.Address)
+	response, err := r.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -118,7 +134,7 @@ func (r *Router) Get(url string) (string, error) {
 	}
 	req.AddCookie(&r.Cookie)
 	req.Header.Set("Referer", url)
-	response, err := r.Client.Do(req)
+	response, err := r.HTTPClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -159,47 +175,57 @@ func contains(clients []Client, client Client) bool {
 	return false
 }
 
-// GetClients obtain the list of clients connected to the router's wireless interface
-func (r *Router) getClients() ([]Client, error) {
-	var clients []Client
+// GetClients updates the list of clients from the list of devices connected
+// to the Router's wireless interface
+func (r *Router) updateWirelessClients() error {
 	body, err := r.Get("http://" + r.Address + "/" + r.Token + CLIENTS_URL)
 	if err != nil {
-		return clients, err
+		return err
 	}
 	expr, err := regexp.Compile(`(?m)(\"([^\"]*)\", \"([^\"]*)\", \"([^\"]*)\", \"([^\"]*)\")`)
 	if err != nil {
-		return clients, err
+		return err
 	}
 	for _, match := range expr.FindAllString(body, -1) {
 		match = strings.Replace(match, " ", "", -1)
 		data := strings.Split(match, ",")
-		client := Client{
+		newClient := Client{
 			Name:      strings.Replace(data[0], "\"", "", -1),
 			MACAddr:   strings.Replace(data[1], "\"", "", -1),
 			IPAddr:    strings.Replace(data[2], "\"", "", -1),
 			DHCPLease: parseLease(strings.Replace(data[3], "\"", "", -1)),
 		}
-		if !contains(clients, client) {
-			clients = append(clients, client)
+		found := false
+		for i := range r.Clients {
+			if r.Clients[i].MACAddr == newClient.MACAddr {
+				found = true
+				r.Clients[i] = newClient
+				r.debug("Updated: %v\n", r.Clients[i])
+			}
+		}
+		if !found {
+			r.Clients = append(r.Clients, newClient)
+			r.debug("New: %v\n", newClient)
 		}
 	}
-	return clients, nil
+	return nil
 }
+
 // GetLANTraffic returns the list of clients connected to the router and
 // information about them like traffic, DHCP Leases, etcetera.
-func (r *Router) GetLANTraffic() ([]Client, error) {
-	var totalClients []Client
-	clients, err := r.getClients()
+func (r *Router) Update() error {
+	err := r.updateWirelessClients()
 	if err != nil {
-		return clients, err
+		return err
 	}
+	r.debug("Adding Ethernet clients\n")
 	body, err := r.Get("http://" + r.Address + "/" + r.Token + STATS_URL)
 	if err != nil {
-		return totalClients, err
+		return err
 	}
 	expr, err := regexp.Compile(`(?m)\d+, "([^\"]*)", "([^\"]*)", \d+, \d+`)
 	if err != nil {
-		return totalClients, err
+		return err
 	}
 	for _, match := range expr.FindAllString(body, -1) {
 		match = strings.Replace(match, " ", "", -1)
@@ -208,35 +234,37 @@ func (r *Router) GetLANTraffic() ([]Client, error) {
 		mac := strings.Replace(data[2], "\"", "", -1)
 		packets, err := strconv.ParseFloat(strings.Replace(data[3], "\"", "", -1), 64)
 		if err != nil {
-			return totalClients, err
+			return err
 		}
 		bytes, err := strconv.ParseFloat(strings.Replace(data[4], "\"", "", -1), 64)
 		if err != nil {
-			return totalClients, err
+			return err
 		}
+		kbytes := bytes / 1024
 		found := false
-		for _, client := range clients {
-			if client.MACAddr == mac {
-				client.Packets = packets
-				client.KBytes = bytes / 1024
-				if !contains(totalClients, client) {
-					totalClients = append(totalClients, client)
-				}
+		for i := range r.Clients {
+			if r.Clients[i].MACAddr == mac {
+				r.Clients[i].Packets = packets
+				r.Clients[i].KBytes = kbytes
 				found = true
+				r.debug("Updated: %v", r.Clients[i])
 			}
 		}
-		if found == false {
-			totalClients = append(totalClients, Client{
+		if !found {
+			client := Client{
 				Name:      "Unknown",
 				MACAddr:   mac,
 				IPAddr:    addr,
 				DHCPLease: 0,
 				Packets:   packets,
-				KBytes:    bytes / 1024,
-			})
+				KBytes:    kbytes,
+			}
+			r.Clients = append(r.Clients, client)
+			r.debug("New: %v", client)
 		}
 	}
-	return totalClients, nil
+	r.debug("%d Clients", len(r.Clients))
+	return nil
 }
 
 // Logout logs out of the router
