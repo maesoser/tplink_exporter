@@ -19,7 +19,6 @@ type routerCollector struct {
 	LANTraffic   *prometheus.Desc
 	LANLeases    *prometheus.Desc
 	LANPackets   *prometheus.Desc
-	ClientsTotal *prometheus.Desc
 
 	router  *tplink.Router
 	macs    macdb.DB
@@ -61,12 +60,6 @@ func newRouterCollector(router *tplink.Router, macs, vendors macdb.DB) *routerCo
 		[]string{"name", "ip", "mac"}, nil,
 	)
 
-	c.ClientsTotal = prometheus.NewDesc(
-		"tplink_client_total",
-		"Total number of clients detected since the exporter is running",
-		nil, nil,
-	)
-
 	c.macs = macs
 	c.vendors = vendors
 	c.router = router
@@ -105,12 +98,6 @@ func (collector *routerCollector) scrape(ch chan<- prometheus.Metric) error {
 		if len(name) != 0 {
 			client.Name = name
 		}
-
-		ch <- prometheus.MustNewConstMetric(
-			collector.ClientsTotal,
-			prometheus.CounterValue,
-			float64(len(collector.router.Clients)),
-		)
 
 		ch <- prometheus.MustNewConstMetric(
 			collector.LANTraffic,
