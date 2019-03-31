@@ -18,7 +18,9 @@ func main() {
 	Pass := flag.String("w", "admin", "Router's password")
 	User := flag.String("u", "admin", "Router's username")
 	Port := flag.Int("p", 9300, "Prometheus port")
+	Verbose := flag.Bool("v", false, "Verbose output")
 	Filename := flag.String("f", "/etc/known_macs", "MAC Database")
+	flag.Parse()
 
 	macs, vendors, err := macdb.Load(*Filename)
 	if err != nil {
@@ -29,6 +31,7 @@ func main() {
 	}
 
 	router := tplink.NewRouter(*Address, *User, *Pass)
+	router.Verbose = *Verbose
 
 	c := newRouterCollector(router, macs, vendors)
 	prometheus.MustRegister(c)

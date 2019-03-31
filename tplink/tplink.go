@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -22,6 +23,8 @@ const (
 	REBOOT_URL      = "/userRpm/SysRebootRpm.htm?Reboot=Reboot"
 	AUTH_KEY_RE     = "[0-9A-Za-z.]+/([A-Z]{16})/userRpm/Index.htm"
 )
+
+const MaxUint = float64(4294967295)
 
 // Client defines a router's client with all it's asssociated data
 type Client struct {
@@ -42,7 +45,15 @@ type Router struct {
 	User       string
 	Pass       string
 
+	Verbose bool
+
 	Clients []Client
+}
+
+func (r *Router) debug(format string, v ...interface{}) {
+	if r.Verbose {
+		log.Printf(format, v...)
+	}
 }
 
 func getMD5Hash(text string) string {
@@ -91,6 +102,7 @@ func (r *Router) Login() error {
 		return err
 	}
 	req.AddCookie(&r.Cookie)
+	req.Header.Set("Referer", "http://"+r.Address)
 	response, err := r.HTTPClient.Do(req)
 	if err != nil {
 		return err
@@ -184,16 +196,16 @@ func (r *Router) updateWirelessClients() error {
 			DHCPLease: parseLease(strings.Replace(data[3], "\"", "", -1)),
 		}
 		found := false
-		for _, oldClient := range r.Clients {
-			if oldClient.MACAddr == newClient.MACAddr {
+		for i := range r.Clients {
+			if r.Clients[i].MACAddr == newClient.MACAddr {
 				found = true
-				oldClient.IPAddr = newClient.IPAddr
-				oldClient.DHCPLease = newClient.DHCPLease
-				oldClient.Name = newClient.Name
+				r.Clients[i] = newClient
+				r.debug("Updated: %v\n", r.Clients[i])
 			}
 		}
 		if !found {
 			r.Clients = append(r.Clients, newClient)
+			r.debug("New: %v\n", newClient)
 		}
 	}
 	return nil
@@ -206,6 +218,7 @@ func (r *Router) Update() error {
 	if err != nil {
 		return err
 	}
+	r.debug("Adding Ethernet clients\n")
 	body, err := r.Get("http://" + r.Address + "/" + r.Token + STATS_URL)
 	if err != nil {
 		return err
@@ -227,28 +240,30 @@ func (r *Router) Update() error {
 		if err != nil {
 			return err
 		}
+		kbytes := bytes / 1024
 		found := false
-		for _, client := range r.Clients {
-			if client.MACAddr == mac {
-				client.Packets = packets
-				client.KBytes = bytes / 1024
-				if !contains(r.Clients, client) {
-					r.Clients = append(r.Clients, client)
-				}
+		for i := range r.Clients {
+			if r.Clients[i].MACAddr == mac {
+				r.Clients[i].Packets = packets
+				r.Clients[i].KBytes = kbytes
 				found = true
+				r.debug("Updated: %v", r.Clients[i])
 			}
 		}
-		if found == false {
-			r.Clients = append(r.Clients, Client{
+		if !found {
+			client := Client{
 				Name:      "Unknown",
 				MACAddr:   mac,
 				IPAddr:    addr,
 				DHCPLease: 0,
 				Packets:   packets,
-				KBytes:    bytes / 1024,
-			})
+				KBytes:    kbytes,
+			}
+			r.Clients = append(r.Clients, client)
+			r.debug("New: %v", client)
 		}
 	}
+	r.debug("%d Clients", len(r.Clients))
 	return nil
 }
 
