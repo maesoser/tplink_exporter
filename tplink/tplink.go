@@ -163,37 +163,46 @@ func contains(clients []Client, client Client) bool {
 	return false
 }
 
-// GetClients obtain the list of clients connected to the router's wireless interface
-func (r *Router) getClients() ([]Client, error) {
-	var clients []Client
+// GetClients updates the list of clients from the list of devices connected
+// to the Router's wireless interface
+func (r *Router) updateWirelessClients() error {
 	body, err := r.Get("http://" + r.Address + "/" + r.Token + CLIENTS_URL)
 	if err != nil {
-		return clients, err
+		return err
 	}
 	expr, err := regexp.Compile(`(?m)(\"([^\"]*)\", \"([^\"]*)\", \"([^\"]*)\", \"([^\"]*)\")`)
 	if err != nil {
-		return clients, err
+		return err
 	}
 	for _, match := range expr.FindAllString(body, -1) {
 		match = strings.Replace(match, " ", "", -1)
 		data := strings.Split(match, ",")
-		client := Client{
+		newClient := Client{
 			Name:      strings.Replace(data[0], "\"", "", -1),
 			MACAddr:   strings.Replace(data[1], "\"", "", -1),
 			IPAddr:    strings.Replace(data[2], "\"", "", -1),
 			DHCPLease: parseLease(strings.Replace(data[3], "\"", "", -1)),
 		}
-		if !contains(clients, client) {
-			clients = append(clients, client)
+		found := false
+		for _, oldClient := range r.Clients {
+			if oldClient.MACAddr == newClient.MACAddr {
+				found = true
+				oldClient.IPAddr = newClient.IPAddr
+				oldClient.DHCPLease = newClient.DHCPLease
+				oldClient.Name = newClient.Name
+			}
+		}
+		if !found {
+			r.Clients = append(r.Clients, newClient)
 		}
 	}
-	return clients, nil
+	return nil
 }
 
 // GetLANTraffic returns the list of clients connected to the router and
 // information about them like traffic, DHCP Leases, etcetera.
 func (r *Router) Update() error {
-	clients, err := r.getClients()
+	err := r.updateWirelessClients()
 	if err != nil {
 		return err
 	}
@@ -219,7 +228,7 @@ func (r *Router) Update() error {
 			return err
 		}
 		found := false
-		for _, client := range clients {
+		for _, client := range r.Clients {
 			if client.MACAddr == mac {
 				client.Packets = packets
 				client.KBytes = bytes / 1024
