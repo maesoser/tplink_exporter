@@ -51,3 +51,19 @@ sudo systemctl start tplink_exporter
 - **tplink_lan_leases_seconds:** Lease time left per device
 
 LAN metrics include IP and MAC addresses and device name as labels. 
+
+
+```
+229 #  tplink_exporter:
+230 #    container_name: tplink_exporter
+231 #    restart: unless-stopped
+232 #    cpu_count: 1
+233 #    mem_limit: 16m
+234 #    build:
+235 #      context: ./containers/tplink_exporter
+236 #      dockerfile: Dockerfile
+237 #    ports:
+238 #     - "9300:9300"
+239 #    volumes:
+240 #     - "./config/tplink_exporter/known_macs:/etc/known_macs"
+```
