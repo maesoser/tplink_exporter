@@ -9,7 +9,8 @@ WORKDIR $GOPATH/src/github.com/maesoser/tplink_exporter
 COPY . .
 
 # Compile it
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' .
+ENV CGO_ENABLED=0
+RUN GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' .
 
 # Create docker
 FROM scratch

@@ -52,18 +52,19 @@ sudo systemctl start tplink_exporter
 
 LAN metrics include IP and MAC addresses and device name as labels. 
 
+## docker-compose.yml
 
 ```
-229 #  tplink_exporter:
-230 #    container_name: tplink_exporter
-231 #    restart: unless-stopped
-232 #    cpu_count: 1
-233 #    mem_limit: 16m
-234 #    build:
-235 #      context: ./containers/tplink_exporter
-236 #      dockerfile: Dockerfile
-237 #    ports:
-238 #     - "9300:9300"
-239 #    volumes:
-240 #     - "./config/tplink_exporter/known_macs:/etc/known_macs"
+tplink_exporter:
+  container_name: tplink_exporter
+  restart: unless-stopped
+  cpu_count: 1
+  mem_limit: 16m
+  build:
+    context: ./containers/tplink_exporter
+    dockerfile: Dockerfile
+  ports:
+   - "9300:9300"
+  volumes:
+   - "./config/tplink_exporter/known_macs:/etc/known_macs"
 ```

@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"sync"
+
 	"github.com/maesoser/tplink_exporter/macdb"
 	"github.com/maesoser/tplink_exporter/tplink"
 	"github.com/prometheus/client_golang/prometheus"
-	"log"
-	"sync"
 )
 
 //Define a struct for you collector that contains pointers
@@ -80,6 +81,7 @@ func (collector *routerCollector) scrape(ch chan<- prometheus.Metric) error {
 	if err != nil {
 		return fmt.Errorf("Error logging: %v", err)
 	}
+	defer collector.router.Logout()
 	rx, tx, err := collector.router.GetWANTraffic()
 	if err != nil {
 		return fmt.Errorf("Error getting WAN metrics: %v", err)
@@ -117,7 +119,6 @@ func (collector *routerCollector) scrape(ch chan<- prometheus.Metric) error {
 
 	}
 	return nil
-	//router.Logout()
 }
 
 //Collect implements required collect function for all promehteus collectors
