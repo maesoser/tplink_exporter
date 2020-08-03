@@ -4,8 +4,9 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"strconv"
 	"os"
+	"strconv"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -23,33 +24,33 @@ func GetEnvStr(name, value string) string {
 func main() {
 	Address := flag.String(
 		"a",
-		GetEnvStr("TPLINK_ROUTER_ADDR","192.168.0.1"),
-		"Router's address"
+		GetEnvStr("TPLINK_ROUTER_ADDR", "192.168.0.1"),
+		"Router's address",
 	)
 	Pass := flag.String(
 		"w",
-		GetEnvStr("TPLINK_ROUTER_PASSWD","admin"),
-		"Router's password"
+		GetEnvStr("TPLINK_ROUTER_PASSWD", "admin"),
+		"Router's password",
 	)
 	User := flag.String(
 		"u",
-		GetEnvStr("TPLINK_ROUTER_USER","admin"),
-		"Router's username"
+		GetEnvStr("TPLINK_ROUTER_USER", "admin"),
+		"Router's username",
 	)
 	Port := flag.Int(
 		"p",
 		9300,
-		"Prometheus port"
+		"Prometheus port",
 	)
 	Verbose := flag.Bool(
 		"v",
 		false,
-		"Verbose output"
+		"Verbose output",
 	)
 	Filename := flag.String(
 		"f",
-		GetEnvStr("TPLINK_ROUTER_MACS","/etc/known_macs"),
-		"MAC Database"
+		GetEnvStr("TPLINK_ROUTER_MACS", "/etc/known_macs"),
+		"MAC Database",
 	)
 	flag.Parse()
 
