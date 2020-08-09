@@ -21,16 +21,15 @@ type routerCollector struct {
 	LANLeases    *prometheus.Desc
 	LANPackets   *prometheus.Desc
 
-	router  *tplink.Router
-	macs    macdb.DB
-	vendors macdb.DB
+	router *tplink.Router
+	macs   macdb.MACDB
 
 	mutex sync.Mutex
 }
 
 //You must create a constructor for you collector that
 //initializes every descriptor and returns a pointer to the collector
-func newRouterCollector(router *tplink.Router, macs, vendors macdb.DB) *routerCollector {
+func newRouterCollector(router *tplink.Router, macs macdb.MACDB) *routerCollector {
 	c := routerCollector{}
 	c.txWANTraffic = prometheus.NewDesc(
 		"tplink_wan_tx_kbytes",
@@ -62,7 +61,6 @@ func newRouterCollector(router *tplink.Router, macs, vendors macdb.DB) *routerCo
 	)
 
 	c.macs = macs
-	c.vendors = vendors
 	c.router = router
 
 	return &c
@@ -96,7 +94,7 @@ func (collector *routerCollector) scrape(ch chan<- prometheus.Metric) error {
 		return fmt.Errorf("Error getting LAN metrics: %v", err)
 	}
 	for _, client := range collector.router.Clients {
-		name := macdb.Lookup(client.MACAddr, collector.macs, collector.vendors)
+		name := collector.macs.Lookup(client.MACAddr)
 		if len(name) != 0 {
 			client.Name = name
 		}

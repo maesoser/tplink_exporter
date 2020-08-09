@@ -164,7 +164,15 @@ func (r *Router) GetWANTraffic() (float64, float64, error) {
 	rx, _ := strconv.ParseFloat(strings.Replace(stats[1], ",", "", -1), 64)
 	tx, _ := strconv.ParseFloat(strings.Replace(stats[2], ",", "", -1), 64)
 
-	return tx / 1024, rx / 1024, nil
+	rx = rx / 1024
+	tx = tx / 1024
+	if tx < 0 {
+		tx = 0
+	}
+	if rx < 0 {
+		rx = 0
+	}
+	return tx, rx, nil
 }
 
 func contains(clients []Client, client Client) bool {
@@ -237,11 +245,17 @@ func (r *Router) Update() error {
 		if err != nil {
 			return err
 		}
+		if packets < 0 {
+			packets = 0
+		}
 		bytes, err := strconv.ParseFloat(strings.Replace(data[4], "\"", "", -1), 64)
 		if err != nil {
 			return err
 		}
 		kbytes := bytes / 1024
+		if kbytes < 0 {
+			kbytes = 0
+		}
 		found := false
 		for i := range r.Clients {
 			if r.Clients[i].MACAddr == mac {
