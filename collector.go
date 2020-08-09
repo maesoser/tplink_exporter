@@ -32,19 +32,19 @@ type routerCollector struct {
 func newRouterCollector(router *tplink.Router, macs macdb.MACDB) *routerCollector {
 	c := routerCollector{}
 	c.txWANTraffic = prometheus.NewDesc(
-		"tplink_wan_tx_kbytes",
-		"Total kbytes transmitted",
+		"tplink_wan_tx_bytes",
+		"Total bytes transmitted",
 		nil, nil,
 	)
 	c.rxWANTraffic = prometheus.NewDesc(
-		"tplink_wan_rx_kbytes",
-		"Total kbytes received",
+		"tplink_wan_rx_bytes",
+		"Total bytes received",
 		nil, nil,
 	)
 
 	c.LANTraffic = prometheus.NewDesc(
-		"tplink_lan_traffic_kbytes",
-		"KBytes sent/received per device",
+		"tplink_lan_traffic_bytes",
+		"Bytes sent/received per device",
 		[]string{"name", "ip", "mac"}, nil,
 	)
 
@@ -102,7 +102,7 @@ func (collector *routerCollector) scrape(ch chan<- prometheus.Metric) error {
 		ch <- prometheus.MustNewConstMetric(
 			collector.LANTraffic,
 			prometheus.GaugeValue,
-			client.KBytes,
+			client.Bytes,
 			client.Name, client.IPAddr, client.MACAddr)
 		ch <- prometheus.MustNewConstMetric(
 			collector.LANLeases,

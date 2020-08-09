@@ -33,7 +33,7 @@ type Client struct {
 	IPAddr    string
 	DHCPLease float64
 	Packets   float64
-	KBytes    float64
+	Bytes     float64
 }
 
 // A Router defined the router object
@@ -164,8 +164,6 @@ func (r *Router) GetWANTraffic() (float64, float64, error) {
 	rx, _ := strconv.ParseFloat(strings.Replace(stats[1], ",", "", -1), 64)
 	tx, _ := strconv.ParseFloat(strings.Replace(stats[2], ",", "", -1), 64)
 
-	rx = rx / 1024
-	tx = tx / 1024
 	if tx < 0 {
 		tx = 0
 	}
@@ -252,15 +250,14 @@ func (r *Router) Update() error {
 		if err != nil {
 			return err
 		}
-		kbytes := bytes / 1024
-		if kbytes < 0 {
-			kbytes = 0
+		if bytes < 0 {
+			bytes = 0
 		}
 		found := false
 		for i := range r.Clients {
 			if r.Clients[i].MACAddr == mac {
 				r.Clients[i].Packets = packets
-				r.Clients[i].KBytes = kbytes
+				r.Clients[i].Bytes = bytes
 				found = true
 				r.debug("Updated: %v", r.Clients[i])
 			}
@@ -272,7 +269,7 @@ func (r *Router) Update() error {
 				IPAddr:    addr,
 				DHCPLease: 0,
 				Packets:   packets,
-				KBytes:    kbytes,
+				Bytes:     bytes,
 			}
 			r.Clients = append(r.Clients, client)
 			r.debug("New: %v", client)
