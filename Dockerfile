@@ -15,4 +15,6 @@ RUN GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' .
 # Create docker
 FROM scratch
 COPY --from=builder /go/src/github.com/maesoser/tplink_exporter/tplink_exporter /app/
+RUN adduser -D tplink
+USER tplink
 ENTRYPOINT ["/app/tplink_exporter"]
