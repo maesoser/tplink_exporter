@@ -170,7 +170,7 @@ func (r *Router) GetWANTraffic() (float64, float64, error) {
 	if rx < 0 {
 		rx = 0
 	}
-	return tx, rx, nil
+	return rx, tx, nil
 }
 
 func contains(clients []Client, client Client) bool {
