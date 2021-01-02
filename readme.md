@@ -1,4 +1,4 @@
-# tplink_exporter [![Build Status](https://travis-ci.org/maesoser/tplink_exporter.svg?branch=master)](https://travis-ci.org/maesoser/tplink_exporter) [![License](https://img.shields.io/github/license/maesoser/tpink_exporter)](https://www.gnu.org/licenses/gpl-3.0.html)
+# tplink_exporter [![Build Status](https://travis-ci.org/maesoser/tplink_exporter.svg?branch=master)](https://travis-ci.org/maesoser/tplink_exporter) [![License](https://img.shields.io/github/license/maesoser/tplink_exporter)](https://www.gnu.org/licenses/gpl-3.0.html) 
 
 Prometheus exporter for cheap TP-Link routers, like the [TL-WR841N](https://www.tp-link.com/en/products/details/cat-9_TL-WR841N.html).
 
