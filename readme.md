@@ -1,4 +1,4 @@
-# tplink_exporter [![Build Status](https://travis-ci.org/maesoser/tplink_exporter.svg?branch=master)](https://travis-ci.org/maesoser/tplink_exporter) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+# tplink_exporter [![Build Status](https://travis-ci.org/maesoser/tplink_exporter.svg?branch=master)](https://travis-ci.org/maesoser/tplink_exporter) [![License](https://img.shields.io/github/license/maesoser/tpink_exporter)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 Prometheus exporter for cheap TP-Link routers, like the [TL-WR841N](https://www.tp-link.com/en/products/details/cat-9_TL-WR841N.html).
 
@@ -10,7 +10,28 @@ The tplink package created for this exporter can be used for another projects be
 
 ## Usage
 
-First compile it, of course. Then, you just need create a systemd service like this one:
+tplink exporter has a few CLI arguments that you can configure like the following ones.
+
+- **-a**: Router's IP address, you can also configure it by using the `TPLINK_ROUTER_ADDR` environment variable.
+- **-w**: Router's password, you can also configure it by using the `TPLINK_ROUTER_PASSWD` environment variable.
+- **-u**: Router's username, you can also configure it by using the `TPLINK_ROUTER_USER` environment variable.
+- **-p**: Prometheus port.
+- **-v**: Verbose output.
+- **-f**: MAC Database, you can also configure it by using the `TPLINK_ROUTER_MACS` environment variable. By default should be located on `/etc/known_macs`.
+
+## Metrics exposed
+
+- **tplink_wan_rx_bytes:** Total bytes received
+- **tplink_wan_tx_bytes:** Total bytes transmitted
+- **tplink_lan_traffic_bytes:** bytes sent/received per device
+- **tplink_lan_traffic_packets:** Packets sent/received per device
+- **tplink_lan_leases_seconds:** Lease time left per device
+
+LAN metrics include IP and MAC addresses and device name as labels. 
+
+## Using systemd
+
+You can run this agent as a service. First you need to compile it and then you just need create a systemd service like this one:
 
 ```
 [Unit]
@@ -35,24 +56,7 @@ sudo systemctl enable tplink_exporter
 sudo systemctl start tplink_exporter
 ```
 
-## Command line flags
-
-- **-a**: Router's IP address
-- **-w**: Router's password
-- **-u**: Router's User
-- **-p**: Prometheus port
-
-## Metrics exposed
-
-- **tplink_wan_rx_kbytes:** Total kbytes received
-- **tplink_wan_tx_kbytes:** Total kbytes transmitted
-- **tplink_lan_traffic_kbytes:** KBytes sent/received per device
-- **tplink_lan_traffic_packets:** Packets sent/received per device
-- **tplink_lan_leases_seconds:** Lease time left per device
-
-LAN metrics include IP and MAC addresses and device name as labels. 
-
-## docker-compose.yml
+## Using docker compose
 
 ```
 tplink_exporter:
