@@ -24,8 +24,6 @@ const (
 	AUTH_KEY_RE     = "[0-9A-Za-z.]+/([A-Z]{16})/userRpm/Index.htm"
 )
 
-const MaxUint = float64(4294967295)
-
 // Client defines a router's client with all it's asssociated data
 type Client struct {
 	Name      string
