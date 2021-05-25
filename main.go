@@ -47,6 +47,11 @@ func main() {
 		false,
 		"Verbose output",
 	)
+        Reboot := flag.Bool(
+		"reboot",
+		false,
+		"Reboots the router",
+	)
 	Filename := flag.String(
 		"f",
 		GetEnvStr("TPLINK_ROUTER_MACS", "/etc/known_macs"),
@@ -65,6 +70,16 @@ func main() {
 	router := tplink.NewRouter(*Address, *User, *Pass)
 	router.Verbose = *Verbose
 
+	if (*Reboot){
+		if err := router.Login(); err != nil {
+                	log.Fatal("Error logging: %v", err)
+        	}
+		if err := router.Reboot(); err != nil {
+			log.Fatal(err)
+		}
+		log.Println("Reboot command sent")
+		os.Exit(1)
+	}
 	c := newRouterCollector(router, macs)
 	prometheus.MustRegister(c)
 

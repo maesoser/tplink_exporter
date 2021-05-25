@@ -10,7 +10,7 @@ COPY . .
 
 # Compile it
 ENV CGO_ENABLED=0
-RUN GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' .
+RUN GOOS=linux go build -a -installsuffix cgo -ldflags '-s -w -extldflags "-static"' .
 
 # Create docker
 FROM scratch
