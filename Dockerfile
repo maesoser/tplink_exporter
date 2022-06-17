@@ -1,4 +1,4 @@
-FROM golang:alpine as builder
+FROM golang:1.15-alpine as builder
 
 # Download and install dependencies
 RUN apk update && apk add --no-cache git
@@ -13,7 +13,7 @@ ENV CGO_ENABLED=0
 RUN GOOS=linux go build -a -installsuffix cgo -ldflags '-s -w -extldflags "-static"' .
 
 # Create docker
-FROM scratch
+FROM alpine
 COPY --from=builder /go/src/github.com/maesoser/tplink_exporter/tplink_exporter /app/
 RUN adduser -D tplink
 USER tplink
